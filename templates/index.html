@@ -1,0 +1,289 @@
+<!--
+ * @Author: your name
+ * @Date: 2020-11-26 18:40:46
+ * @LastEditTime: 2020-11-30 17:06:39
+ * @LastEditors: Please set LastEditors
+ * @Description: In User Settings Edit
+ * @FilePath: \djangoProject\templates\index.html
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <title>Document</title>
+    <!-- Bootstrap -->
+    <script src="/static/js/jQuery.min.js"></script>
+    <script src="/static/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="/static/css/bootstrap.css">
+    <!-- <script src="/static/apache-echarts-4.9.0-incubating-src/src/echarts.js"></script> -->
+    <script crossorigin="anonymous"
+        integrity="sha512-odXFR6jGqGLJay2LHI5hit0IEfyxJ2UexST/qvnljBPrbXMwU44CoVddZjD9EsrtS6bMOoz8lC2yU0nhyh9yyg=="
+        src="https://lib.baomitu.com/echarts/5.0.0/echarts.common.js"></script>
+
+</head>
+
+<body>
+    
+    <div class="container">        
+        
+        <div class="row ">
+
+            <form class="form-inline ">
+                <div class="form-group">
+                    <label for="exampleInputName2">点的数量</label>
+                    <input type="number" class="form-control" id="exampleInputName2" placeholder="number">
+                </div>
+                <div class="form-group">
+                    <label for="exampleInputEmail2">噪声</label>
+                    <input type="number" class="form-control" id="exampleInputEmail2" placeholder="noise">
+                </div>
+                <!-- <button class="btn btn-success" onclick=a2() type="button">生成数据集</button> -->
+
+            </form>
+
+        </div>
+        <br>
+        <button class="btn btn-success" onclick=a1()>生成数据集</button>
+
+
+        <!-- 数据集区域 -->
+        <div id="main" style="width: 800px;height:500px;"></div>
+        <br>
+        <button class="btn btn-success" onclick=epsTest()>测试eps</button>
+        <br>
+        <input type="number" class="form-control" id="epsNumber" placeholder="eps">
+        <br>
+        <button class="btn btn-success" onclick=codeTest()>程序执行</button>
+        <br>
+        <!-- eps选取 -->
+        <div id="main1" style="width: 800px;height:500px;"></div>
+    </div>
+
+</body>
+
+<script>
+    // 
+    function a2() {
+        console.log($('#exampleInputName2').val() === '');
+        console.log($('#exampleInputName2').val());
+        if (!$('#exampleInputName2').val() == '' && !$('#exampleInputEmail2').val() == '') {
+            $.post("/ajax/", { "number": $('#exampleInputName2').val(), 'noise': $('#exampleInputEmail2').val() }, function (d) {
+                localStorage.removeItem("temp");
+                localStorage.setItem("temp", d)
+            })
+            console.log("判断正确");
+
+        } else alert("请输入正确的数值")
+        var d = localStorage.getItem("temp");
+        // console.log(d);
+        var d = eval('(' + d + ')');
+        console.log(typeof d);;
+        var option = {
+            xAxis: {},
+            yAxis: {},
+            series: [{
+                symbolSize: 5,
+                data: d,
+                type: 'scatter'
+            }]
+        };
+        myChart.setOption(option);
+    }
+    //生成数据集代码
+    function a1() {
+        // console.log(JSON.stringify($("form").serialize()));
+        $.post("/ajax/", { "number": $('#exampleInputName2').val(), 'noise': $('#exampleInputEmail2').val() }, function (d) {
+            localStorage.removeItem("temp");
+            localStorage.setItem("temp", d)
+            var d = localStorage.getItem("temp");
+            var d = eval('(' + d + ')');
+            //            console.log(typeof d);;
+            var option = {
+                xAxis: {},
+                yAxis: {},
+                series: [{
+                    symbolSize: 5,
+                    data: d,
+                    type: 'scatter'
+                }]
+            };
+            myChart.setOption(option);
+        })
+    }
+
+    // 指定图表的配置项和数据
+    var myChart = echarts.init(document.getElementById('main'));
+    var myChart1 = echarts.init(document.getElementById('main1'));
+
+    //通过K距离选取eps
+    function epsTest() {
+        //读取数据集
+        var d = localStorage.getItem("temp");
+        //转为JSON对象
+        var obj = JSON.parse(d)
+        crr = []
+        crr = K_distance(obj)
+        //绘制图像
+        da = [];
+        for (var i = 0; i < obj.length; i++) {
+            da.push(i)
+        }
+        option1 = {
+            xAxis: {
+                data: da
+            },
+            yAxis: {
+                type: 'value'
+            },
+            dataZoom: [{
+                type: 'slider',//图表下方的伸缩条
+                show: true, //是否显示
+                realtime: true, //拖动时，是否实时更新系列的视图
+                start: 0, //伸缩条开始位置（1-100），可以随时更改
+                end: 100, //伸缩条结束位置（1-100），可以随时更改
+            }],
+            series: [{
+                data: crr,
+                type: 'line'
+            }]
+        };
+        myChart1.setOption(option1);
+    }
+
+    //根据eps 进行测试
+    function codeTest() {
+        //        console.log($('#epsNumber').val());
+        //        console.log(Number($('#epsNumber').val()));
+
+        this.Eps = Number($('#epsNumber').val());
+        this.MinPts = 4;
+        this.arr = [];
+        this.value = new Array();//用于返回簇
+        this.Clusterid = 1;//簇号
+        //读取数据集
+        var d = localStorage.getItem("temp");
+        //转为JSON对象
+        var obj = JSON.parse(d)
+        for (let index = 0; index < obj.length; index++) {
+            obj[index].vis = false;//是否遍历
+            obj[index].cluster = 0;//默认代表噪声         
+        }
+        for (const key in obj) {
+            var P = find_nb(key, obj)
+            if (P) {
+                this.Clusterid++;//如果有簇生 成，就把计数+1
+            }
+
+        }
+        //对需要显示的数据进行处理
+        //先获取有多少个簇
+        //可以优化显示
+        data1 = [];
+        data2 = [];
+        data3 = [];
+        for (let index = 0; index < obj.length; index++) {
+            if (obj[index].cluster == 0) {
+                data1.push(obj[index])
+            } else if (obj[index].cluster == 1) {
+                data2.push(obj[index])
+            } else {
+                data3.push(obj[index])
+            }
+
+        }
+        //echarts 显示数据
+        var option = {
+            xAxis: {},
+            yAxis: {},
+            series: [{
+                symbolSize: 5,
+                data: data2,
+                type: 'scatter',
+            }, {
+                symbolSize: 5,
+                data: data3,
+                type: 'scatter'
+            }, {
+                symbolSize: 5,
+                data: data1,
+                type: 'scatter',
+                itemStyle: {
+                    color: "rgba(50, 34, 34, 1)"
+                }
+            }]
+
+        };
+        myChart.setOption(option);
+    }
+
+
+    /**
+     *  传入数据集
+     *  随机选取一个点
+     *  计算这个点与其他点之间的距离 
+     *  返回排序后距离
+    */
+    function K_distance(arr) {
+        var crr = []
+        k = Math.round(Math.random() * 200);
+        for (const j in arr) {
+            //计算欧式距离
+            var c = Math.pow(arr[k][0] - arr[j][0], 2);
+            var d = Math.pow(arr[k][1] - arr[j][1], 2);
+            var e = Math.pow(c + d, 0.5);
+            crr.push(e)
+        }
+        crr.sort()
+        return crr
+    }
+
+    /**
+     * 
+     *  具体代码
+     * 
+     *  首先检测array是否未被访问
+     *      计算欧式距离
+     *  是否满足密度条件
+     *      满足标记簇族号
+     *          对密度范围内的所有点递归
+     *      不满足
+     *          计数点清空
+     *          存储点清空
+     * 
+    */
+    function find_nb(key, obj) {
+        if (!obj[Number(key)].vis) {//如果未被访问，则执行
+            obj[key].vis = true;
+            var sum = 0;//计数
+            var brr = [];//计算密度范围内的点
+            for (const j in obj) {
+                //计算欧式距离
+                var c = Math.pow(obj[key][0] - obj[j][0], 2);
+                var d = Math.pow(obj[key][1] - obj[j][1], 2);
+                var e = Math.pow(c + d, 0.5);
+                //是否满足给定的eps
+                if (e < this.Eps) {
+                    sum++;
+                    brr.push(j);
+                }
+            }
+            if (sum > this.MinPts) {//满足密度条件
+                obj[key].cluster = this.Clusterid;//标记簇序号
+                for (m in brr) {//对密度范围内所有点递归
+                    this.find_nb(brr[m], obj);
+                }
+                return true;
+            } else {//不满足密度条件
+                sum = 0;//计数清空
+                brr.length = 0;//存储的点清空
+                return false;
+            }
+        }
+    }
+</script>
+
+</html>
